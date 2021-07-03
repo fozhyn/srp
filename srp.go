@@ -83,7 +83,7 @@ a non-nil bigInt. If you set this to nil, then we will generate one for you.
 You need the same k on both server and client.
 */
 func NewSRPClient(group *Group, x *big.Int, k *big.Int) *SRP {
-	return newSRP(false, group, x, k)
+	return newSRP(false, group, x, k, nil)
 }
 
 /*
@@ -98,10 +98,14 @@ a non-nil bigInt. If you set this to nil, then we will generate one for you.
 You need the same k on both server and client.
 */
 func NewSRPServer(group *Group, v *big.Int, k *big.Int) *SRP {
-	return newSRP(true, group, v, k)
+	return newSRP(true, group, v, k, nil)
 }
 
-func newSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
+func NewSRPServerWithPrivate(group *Group, v *big.Int, k *big.Int, s *big.Int) *SRP {
+	return newSRP(true, group, v, k, s)
+}
+
+func newSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int, secret *big.Int) *SRP {
 	s := &SRP{
 		// Setting these to Int-zero gives me a useful way to test
 		// if these have been properly set later
@@ -136,7 +140,11 @@ func newSRP(serverSide bool, group *Group, xORv *big.Int, k *big.Int) *SRP {
 	} else {
 		s.makeLittleK()
 	}
-	s.generateMySecret()
+	if secret != nil {
+		s.ephemeralPrivate = secret
+	} else {
+		s.generateMySecret()
+	}
 	if s.isServer {
 		s.makeB()
 	} else {
@@ -161,6 +169,19 @@ func (s *SRP) EphemeralPublic() *big.Int {
 		s.makeA()
 	}
 	return s.ephemeralPublicA
+}
+
+func (s *SRP) EphemeralPrivate() *big.Int {
+	if s.isServer {
+		if s.ephemeralPublicB.Cmp(bigZero) == 0 {
+			s.makeB()
+		}
+		return s.ephemeralPublicB
+	} else if s.ephemeralPublicA.Cmp(bigZero) == 0 {
+		s.makeA()
+	}
+
+	return s.ephemeralPrivate
 }
 
 // IsPublicValid checks to see whether public A or B is valid within the group

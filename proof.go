@@ -1,8 +1,8 @@
 package srp
 
 import (
-	"crypto/subtle"
 	"crypto/sha256"
+	"crypto/subtle"
 	"fmt"
 )
 
